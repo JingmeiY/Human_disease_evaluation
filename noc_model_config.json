@@ -1,0 +1,34 @@
+{
+    "vllm": {
+        "base_url": "http://localhost:8000/v1",
+        "api_key": "EMPTY",
+        "model": {
+                 "NonSeverity": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Non-severity",
+                 "Severity": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "Extraction": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Extraction",
+                 "Embedding": "intfloat/multilingual-e5-large",
+                 "Pathogen": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "External_risk": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "Clinical_impact": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "Transmission": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "Geographic": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity",
+                 "Healthcare_system": "Paschalidis-NOC-Lab/Llama-3.1-8B-Full-Severity"
+                }
+    },
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "Fill your key",
+        "model": {
+                "NonSeverity": "gpt-4o",
+                "Severity": "gpt-4o",
+                "Extraction": "gpt-4o",
+                "Embedding": "text-embedding-ada-002",
+                "Pathogen": "gpt-4o",
+                "External_risk": "gpt-4o",
+                "Clinical_impact": "gpt-4o",
+                "Transmission": "gpt-4o",
+                "Geographic": "gpt-4o",
+                "Healthcare_system": "gpt-4o"
+       }
+    }
+  }
