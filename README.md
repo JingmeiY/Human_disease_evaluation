@@ -1,3 +1,15 @@
+# BEACON LLM Human Disease Evaluation
+
+This repository contains tools for evaluating BEACON LLM models on human disease severity assessment tasks, including dataset preparation, model evaluation, and SME (Subject Matter Expert) evaluation through Google Forms.
+
+## Table of Contents
+1. [Step 1: Prepare Test Dataset](#step-1-prepare-test-dataset)
+2. [Step 2: Model Deployment](#step-2-model-deployment)
+3. [Step 3: Prepare Evaluation Dataset](#step-3-prepare-evaluation-dataset)
+4. [Step 4: Generate Google Forms for SME Evaluation](#step-4-generate-google-forms-for-sme-evaluation)
+
+---
+
 # Step 1: Prepare Test Dataset
 
 ## Running the Script
@@ -33,6 +45,8 @@ The script processes the input and generates output in the following format:
     "GT": "Ground truth severity assessment in JSON format"
 }
 ```
+
+---
 
 # Step 2: Model Deployment
 
@@ -89,22 +103,28 @@ export HF_TOKEN="your_huggingface_token_here"
 
 ## Model Deployment
 
-
 ### Deploy Model with vLLM
 ```bash
 # pull if not exists, otherwise use existing
 docker images beacon-app | grep -q beacon-app || docker pull jingmeiyang/beacon-app && docker tag jingmeiyang/beacon-app beacon-app
 ```
 
-
 # Start the vLLM server
+
 ```bash
-docker run -d --gpus all -v ./:/app \
+docker run -d \
+    --gpus all \
+    -v ./:/app \
     -e HF_HOME="HF_HOME" \
     -e HUGGING_FACE_HUB_TOKEN=$HF_TOKEN \
-    -p 8000:8000 --name vllm-container beacon-app \
-    vllm serve "$MODEL_NAME" --trust-remote-code \
-    --host 0.0.0.0 --port 8000 --enable-prefix-caching
+    -p 8000:8000 \
+    --name vllm-container \
+    beacon-app \
+    vllm serve "$MODEL_NAME" \
+    --trust-remote-code \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --enable-prefix-caching
 ```
 
 ### Verify Deployment
@@ -137,9 +157,187 @@ python Script/evaluate_severity.py \
     --config $MODEL_CONFIG_PATH
 ```
 
+---
 
+# Step 3: Prepare Evaluation Dataset
 
-### Useful Commands
+After running model evaluations, prepare the dataset for SME evaluation using a multi-step process:
+
+## 3.1 Combine Model Outputs
+
+Combine predictions from two different models and parse their outputs:
+
+```bash
+python Script/combine_model_outputs.py
+```
+
+**What it does:**
+- Loads predictions from both Paschalidis-NOC-Lab and meta-llama models
+- Parses JSON outputs to extract overall scores and reasoning
+- Validates data quality (skips samples with invalid JSON or missing scores)
+- Generates domain descriptions for each sample
+- Outputs: `Result/evaluation_data/combined_model_outputs.json`
+
+## 3.2 Randomize and Blind Model Assignments
+
+Randomize model assignments to prevent evaluation bias:
+
+```bash
+python Script/randomize_models.py
+```
+
+**What it does:**
+- Assigns models to A/B positions based on sample_id parity:
+  - Even sample_ids: Paschalidis=A, Meta=B
+  - Odd sample_ids: Paschalidis=B, Meta=A
+- Creates randomized evaluation data where SMEs can't see which model is which
+- Maintains mapping for later analysis
+- Outputs: 
+  - `Result/evaluation_data/randomized_evaluation_data.json`
+  - `Result/evaluation_data/model_mapping.json`
+
+## 3.3 Select Evaluation Subset
+
+Select a manageable subset of samples for SME evaluation:
+
+```bash
+python Script/select_evaluation_subset.py
+```
+
+**What it does:**
+- Groups samples by article_id
+- Selects top articles with the most samples (default: 500 articles)
+- Ensures good domain coverage across selected samples
+- Outputs: `Result/evaluation_data/selected_evaluation_samples.json`
+
+## 3.4 Create Evaluation Batches
+
+Split the selected samples into manageable batches for evaluation:
+
+```bash
+python Script/create_evaluation_batches.py
+```
+
+**What it does:**
+- Groups samples by article_id (maintains article integrity)
+- Creates batches of N articles each (default: 2 articles per batch)
+- Maintains original order (no randomization)
+- Outputs: 
+  - `Result/evaluation_data/batches/evaluation_samples_batch_1.json`
+  - `Result/evaluation_data/batches/evaluation_samples_batch_2.json`
+  - `Result/evaluation_data/batches/batch_summary.json`
+
+**Batch Structure:**
+Each batch file contains samples with the following fields:
+```json
+{
+    "sample_id": 23,
+    "domain": "Geographic",
+    "factors_description": "This domain evaluates factors related to Geographic",
+    "article_content": "Full news article text...",
+    "reference_score": "5",
+    "reference_reasoning": "Reference assessment reasoning...",
+    "model_a_score": "5",
+    "model_a_reasoning": "Model A reasoning...",
+    "model_b_score": "5", 
+    "model_b_reasoning": "Model B reasoning...",
+    "model_a_actual": "meta-llama",
+    "model_b_actual": "Paschalidis-NOC-Lab",
+    "article_id": 23
+}
+```
+
+---
+
+# Step 4: Generate Google Forms for SME Evaluation
+
+Create Google Forms for Subject Matter Expert evaluation using Google Colab.
+
+## 4.1 Setup Requirements
+
+1. **Google Cloud Project**: Create a project with Forms, Drive, and Sheets APIs enabled
+2. **Google Colab**: Use the provided notebook `Script/google_forms_creator_colab.ipynb`
+3. **Batch Data**: Upload your batch JSON files to Colab
+
+## 4.2 Using the Colab Notebook
+
+### Upload Files to Colab
+1. Upload your batch files: `evaluation_samples_batch_X.json`
+2. Upload the notebook: `google_forms_creator_colab.ipynb`
+
+### Configure the Notebook
+Update the configuration cell with your settings:
+
+```python
+# Configuration
+PROJECT_ID = "your-google-cloud-project-id"
+BATCH_ID = 1  # Change this for each batch
+JSON_FILE_PATH = f"/content/evaluation_samples_batch_{BATCH_ID}.json"
+FORM_TITLE = "BEACON LLM Evaluation for the Severity Assessment"
+```
+
+### Run the Notebook
+Execute all cells in sequence. The notebook will:
+
+1. **Authenticate** with Google APIs
+2. **Load** your batch data 
+3. **Create** a Google Form with:
+   - Email collection for progress tracking
+   - Page breaks between samples
+   - Sample ID and Article ID tracking (visible)
+   - Reference assessment evaluation
+   - Model A vs Model B comparison
+   - Optional expert assessment
+   - Comment fields
+4. **Create** a linked Google Spreadsheet for responses
+5. **Generate** form URLs for distribution
+
+### Form Structure
+Each sample in the form includes:
+
+**Tracking Information:**
+- Sample ID: [Visible for reference]
+- Article ID: [Visible for reference]
+
+**Evaluation Tasks:**
+1. **Reference Assessment Validation**
+   - Rate appropriateness of reference score
+   - Rate quality of reference reasoning
+
+2. **Model Comparison**
+   - Compare Model A vs Model B scores
+   - Compare Model A vs Model B reasoning quality
+
+3. **Expert Assessment (Optional)**
+   - Provide your own expert score if needed
+   - Additional comments
+
+### Output Files
+The notebook generates:
+- **Google Form**: Ready for SME distribution
+- **Response Spreadsheet**: Automatically linked for data collection
+- **Form URLs**: For editing and sharing
+- **Form metadata**: JSON file with all form details
+
+## 4.3 Distribution to SMEs
+
+1. **Share the public form URL** with your Subject Matter Experts
+2. **Monitor responses** via the linked Google Spreadsheet
+3. **Track progress** using email addresses collected in the form
+4. **Analyze results** using the model mapping file to correlate responses with actual model performance
+
+## 4.4 Data Analysis
+
+After collecting SME responses:
+1. Download the response spreadsheet as CSV/JSON
+2. Use `Result/evaluation_data/model_mapping.json` to map responses back to actual models
+3. Analyze SME preferences and agreement with reference assessments
+4. Compare fine-tuned model (Paschalidis-NOC-Lab) vs base model (meta-llama) performance
+
+---
+
+## Useful Commands
+
 ```bash
 # Check container status
 docker ps -a
@@ -152,6 +350,8 @@ nvidia-smi
 
 # Stop all containers
 docker stop $(docker ps -aq)
+docker rm <container id>
 ```
 
+## File Structure
 
