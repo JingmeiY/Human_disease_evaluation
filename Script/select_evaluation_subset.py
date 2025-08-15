@@ -20,18 +20,15 @@ from utility import load_json_file, save_json_file
 
 
 def select_evaluation_subset(blinded_data: List[Dict[str, Any]], 
-                           target_articles: int = 50, 
-                           min_samples_per_article: int = 2) -> List[Dict[str, Any]]:
+                           target_articles: int = 50) -> List[Dict[str, Any]]:
     """
     Select a subset of samples for evaluation using article-based sampling strategy.
     
-    Strategy: Select articles with highest sample counts across domains,
-             targeting ~15-20 articles that give 100+ samples total.
+    Strategy: Select the top articles with the most samples.
     
     Args:
         blinded_data: List of blinded sample data
-        target_articles: Target number of articles to select
-        min_samples_per_article: Minimum samples per article to consider
+        target_articles: Number of top articles to select (default: 50)
         
     Returns:
         List of selected samples for evaluation
@@ -56,37 +53,28 @@ def select_evaluation_subset(blinded_data: List[Dict[str, Any]],
             "samples": samples
         })
     
-    # Sort by sample count (descending) and domain coverage (descending)
-    article_stats.sort(key=lambda x: (x["sample_count"], x["domain_count"]), reverse=True)
+    # Sort by sample count (highest to lowest)
+    article_stats.sort(key=lambda x: x["sample_count"], reverse=True)
     
     print(f"Article statistics (top 10):")
     for i, stats in enumerate(article_stats[:10]):
         print(f"  Article {stats['article_id']}: {stats['sample_count']} samples, {stats['domain_count']} domains")
     
-    # Select top articles that meet criteria
-    selected_articles = []
-    total_samples = 0
-    domain_coverage = set()
-    
-    for stats in article_stats:
-        if len(selected_articles) >= target_articles:
-            break
-            
-        if stats["sample_count"] >= min_samples_per_article:
-            selected_articles.append(stats)
-            total_samples += stats["sample_count"]
-            domain_coverage.update(stats["domains"])
-            
-            if total_samples >= 100:  # Stop if we have enough samples
-                break
+    # Select top N articles
+    selected_articles = article_stats[:target_articles]
     
     # Collect all samples from selected articles
     selected_samples = []
+    total_samples = 0
+    domain_coverage = set()
+    
     for article_stats in selected_articles:
         selected_samples.extend(article_stats["samples"])
+        total_samples += article_stats["sample_count"]
+        domain_coverage.update(article_stats["domains"])
     
-    print(f"Selected {len(selected_articles)} articles with {len(selected_samples)} total samples")
-    print(f"Domain coverage: {len(domain_coverage)} domains - {list(domain_coverage)}")
+    print(f"Selected {len(selected_articles)} articles with {total_samples} total samples")
+    print(f"Domain coverage: {len(domain_coverage)} domains - {sorted(list(domain_coverage))}")
     
     return selected_samples
 
@@ -109,7 +97,7 @@ def main():
     print(f"Loaded {len(blinded_data)} blinded samples")
     
     # Select evaluation subset
-    selected_data = select_evaluation_subset(blinded_data, target_articles=50, min_samples_per_article=2)
+    selected_data = select_evaluation_subset(blinded_data, target_articles=500)
     
     # Remove internal tracking fields from final output
     final_data = []
