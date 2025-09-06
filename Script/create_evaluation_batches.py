@@ -92,7 +92,7 @@ def main():
     print(f"Loaded {len(selected_data)} selected samples")
     
     # Create batches
-    batches = create_evaluation_batches(selected_data, articles_per_batch=2)
+    batches = create_evaluation_batches(selected_data, articles_per_batch=1)
     
     # Save each batch to a separate file
     batch_files = []
@@ -135,7 +135,6 @@ def main():
     print("SUMMARY")
     print("=" * 60)
     print(f"Total batches created: {len(batches)}")
-    print(f"Articles per batch: 5 (except possibly the last batch)")
     print(f"Total samples distributed: {sum(len(batch) for batch in batches)}")
     print(f"Batch files saved in: {output_dir}")
     
