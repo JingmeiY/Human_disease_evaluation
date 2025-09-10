@@ -17,13 +17,6 @@ from utility import load_json_file, save_json_file
 from openai import OpenAI
 
 
-class ReferenceValidation(BaseModel):
-    """Pydantic model for structured evaluation output"""
-    Q1_score_appropriateness: str  # "Too low" | "Appropriate" | "Too high"
-    Q1_explanation: str
-    Q2_reasoning_quality: str      # "Poor" | "Average" | "Good"
-    Q2_explanation: str
-
 
 class ReferenceValidationJudge:
     
@@ -52,32 +45,27 @@ class ReferenceValidationJudge:
     def create_validation_prompt(self, sample: Dict[str, Any]) -> str:
         
         prompt = f"""
-## EVALUATION CONTEXT
+You are given an article, the domain-specific guidelines used for an assessment, and the assessment itself (a score and reasoning).
 
-**Domain:** {sample.get('domain', 'Unknown')}
-**Risk Factors:** {sample.get('factors_description', 'Not specified')}
+## INSTRUCTIONS
+1.  **Analyze the Article:** First, carefully read the article to identify the key facts, epidemiological information, and potential public health risks.
+2. **Evaluate the Assessment:** Carefully compare the provided 'Severity Score' and 'Reasoning' against the article's content and assessment guidelines. When articles contain limited information, apply your domain expertise in epidemiology and infectious disease principles to evaluate whether the overall assessment appropriately draws upon established scientific knowledge to assign appropriate scores and provide comprehensive reasoning, even when this knowledge extends beyond the specific details provided in the article.
+3.  **Formulate Answers:** Based on your expert analysis, determine if the score is appropriate and if the reasoning is of high quality. Assess whether the reasoning is scientifically accurate, coherent, and complete.
 
-## ARTICLE CONTENT
+### 1. ARTICLE CONTENT
 {sample.get('article_content', 'Article content not available')}
+
+### 2. ASSESSMENT GUIDELINES
+The following assessment was generated based on the '{sample.get('domain', 'Unknown')}' domain, using these guidelines:
+{sample.get('factors_description', 'Not specified')}
+
+### 3. SEVERITY SCALE
+1 = Very Low Risk, 2 = Low Risk, 3 = Moderate Risk, 4 = High Risk, 5 = Very High Risk
 
 ## ASSESSMENT TO EVALUATE
 **Severity Score:** {sample.get('reference_score', 'N/A')}/5
 **Reasoning:** {sample.get('reference_reasoning', 'No reasoning provided')}
 
-## SEVERITY SCALE REFERENCE
-1 = Very Low Risk
-2 = Low Risk  
-3 = Moderate Risk
-4 = High Risk
-5 = Very High Risk
-
-## EVALUATION GUIDELINES
-
-**Scientific Accuracy:** Evaluate the correctness of epidemiological and medical information presented in the reasoning.
-
-**Risk Appropriateness:** Assess how well the severity score matches the described threat level given the article content and domain-specific risk factors.
-
-**Reasoning Quality:** Judge the completeness, clarity, and logical coherence of the justification provided.
 
 ## EVALUATION QUESTIONS
 
@@ -96,12 +84,8 @@ B. Average (acceptable but could be more comprehensive or precise)
 C. Good (accurate, well-reasoned, and appropriately comprehensive)
 
 ## REQUIRED OUTPUT FORMAT
-
-Provide your evaluation in the following JSON format:
-
-```json
-{{"Q1_score_appropriateness": "<A. Too low|B. Appropriate|C. Too high>", "Q1_explanation": "<Brief explanation for your choice in Q1>", "Q2_reasoning_quality": "<A. Poor|B. Average|C. Good>", "Q2_explanation": "<Brief explanation for your choice in Q2>"}}
-```
+Your response MUST be a single, valid JSON object and nothing else. Do not include any explanatory text before or after the JSON.
+{{"Q1_score_appropriateness": "A, B, or C", "Q1_explanation": "Explain why the Score is Too low, Appropriate, or Too high. Be concise (1-2 sentences).", "Q2_reasoning_quality": "A, B, or C", "Q2_explanation": "Explain why the reasoning is Poor, Average, or Good, pointing out specific strengths or weaknesses. Be concise (1-2 sentences)."}}
 """
         return prompt
     
@@ -112,21 +96,22 @@ Provide your evaluation in the following JSON format:
         print(f"Validating sample {sample_id}...")
         
         prompt = self.create_validation_prompt(sample)
+        print(f"Prompt: {prompt}")
         
         try:
             response = self.client.chat.completions.create(
                 model=self.judge_model,
                 messages=[
-                    {"role": "system", "content": "You are an expert epidemiologist and public health specialist conducting systematic evaluations of AI-generated disease outbreak severity assessments."},
+                    {"role": "system", "content": "You are an expert public health analyst and epidemiologist with extensive experience in infectious disease surveillance, outbreak investigation, and risk assessment. Your task is to perform a rigorous, evidence-based evaluation of AI-generated severity assessments for infectious disease reports."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=1000,
+                max_tokens=4096,
             )
             
             # Save raw response content directly
             raw_response = response.choices[0].message.content
-            print(f"Raw response: {raw_response}")
+            print(f"Raw response: {raw_response}\n\n")
             
             # Create result with original sample data + evaluation
             result = {
@@ -174,10 +159,10 @@ Provide your evaluation in the following JSON format:
 
 def main():
     parser = argparse.ArgumentParser(description="LLM-as-Judge Reference Validation")
-    parser.add_argument("--judge_model", default="deepseek-reasoner", help="Judge model name")
-    parser.add_argument("--delay", type=float, default=1.0, help="Delay between API calls (seconds)")
+    parser.add_argument("--judge_model", default="gemini-2.5-pro", help="Judge model name")
+    parser.add_argument("--delay", type=float, default=3.0, help="Delay between API calls (seconds)")
     parser.add_argument("--input_file", default="./Result/evaluation_data/selected_evaluation_samples.json", help="Path to input JSON file with samples")
-    parser.add_argument("--output_dir", default="./Result/LLM_Judge/deepseek-reasoner", help="Path to input JSON file with samples")
+    parser.add_argument("--output_dir", default="./Result/LLM_Judge/gemini-2.5-pro", help="Path to input JSON file with samples")
     parser.add_argument("--judge_config_path", default="./llm_judge_config.json", help="Path to judge config file")
 
     args = parser.parse_args()
