@@ -72,19 +72,14 @@ The following assessments were generated based on the '{sample.get('domain', 'Un
 ### 3. SEVERITY SCALE
 1 = Very Low Risk, 2 = Low Risk, 3 = Moderate Risk, 4 = High Risk, 5 = Very High Risk
 
-## MODEL ASSESSMENTS TO COMPARE
-
-**Model A Assessment:**
-- Severity Score: {sample.get('model_a_score', 'N/A')}/5
-- Severity Reasoning: {sample.get('model_a_reasoning', 'No reasoning provided')}
-
-**Model B Assessment:**
-- Severity Score: {sample.get('model_b_score', 'N/A')}/5  
-- Severity Reasoning: {sample.get('model_b_reasoning', 'No reasoning provided')}
-
 ## EVALUATION QUESTIONS
 
 **Q1: Score Comparison**
+
+Model A Score: {sample.get('model_a_score', 'N/A')}/5
+
+Model B Score: {sample.get('model_b_score', 'N/A')}/5
+
 Which model provides a more appropriate severity score for this scenario?
 
 A. Model A clearly better
@@ -94,6 +89,11 @@ D. Model B slightly better
 E. Model B clearly better
 
 **Q2: Reasoning Comparison**
+
+Model A Reasoning: {sample.get('model_a_reasoning', 'No reasoning provided')}
+
+Model B Reasoning: {sample.get('model_b_reasoning', 'No reasoning provided')}
+
 Which model provides better reasoning and justification?
 
 A. Model A reasoning is much better
@@ -127,7 +127,7 @@ Your response MUST be a single, valid JSON object and nothing else. Do not inclu
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=1000,
+                max_tokens=4096,
             )
             
             # Save raw response content directly
@@ -178,10 +178,10 @@ Your response MUST be a single, valid JSON object and nothing else. Do not inclu
 
 def main():
     parser = argparse.ArgumentParser(description="LLM-as-Judge Model Comparison")
-    parser.add_argument("--judge_model", default="gemini-2.5-flash", help="Judge model name")
+    parser.add_argument("--judge_model", default="gemini-2.5-pro", help="Judge model name")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay between API calls (seconds)")
     parser.add_argument("--input_file", default="./Result/evaluation_data/selected_evaluation_samples.json", help="Path to input JSON file with samples")
-    parser.add_argument("--output_dir", default="./Result/LLM_Judge/gemini-2.5-flash", help="Path to input JSON file with samples")
+    parser.add_argument("--output_dir", default="./Result/LLM_Judge/gemini-2.5-pro", help="Path to input JSON file with samples")
     parser.add_argument("--judge_config_path", default="./llm_judge_config.json", help="Path to judge config file")
 
     args = parser.parse_args()
@@ -191,7 +191,7 @@ def main():
 
     # Load samples
     print(f"Loading samples from {args.input_file}")
-    samples = load_json_file(args.input_file)[10:20]
+    samples = load_json_file(args.input_file)
     print(f"Loaded {len(samples)} samples")
     
     # Initialize judge with auto-loaded config

@@ -246,7 +246,7 @@ def main():
     # Essential arguments only
     parser.add_argument(
         "--input", "-i",
-        default="./Result/LLM_Judge/gpt-5-chat-latest/reference_validation_results.json",
+        default="./Result/LLM_Judge/gemini-2.5-pro/reference_validation_results.json",
         help="Input JSON file with validation results"
     )
     
@@ -258,7 +258,7 @@ def main():
     
     parser.add_argument(
         "--output_dir", "-d",
-        default="./Result/LLM_Judge/gpt-5-chat-latest",
+        default="./Result/LLM_Judge/gemini-2.5-pro",
 
         help="Output directory (optional)"
     )
@@ -292,7 +292,7 @@ def main():
                 output_file = os.path.join(args.output_dir, os.path.basename(output_file))
             elif not args.output:
                 input_dir = os.path.dirname(args.input)
-                output_file = os.path.join(input_ dir, output_file)
+                output_file = os.path.join(input_dir, output_file)
             
             try:
                 with open(output_file, 'w', encoding='utf-8') as f:
