@@ -178,10 +178,10 @@ Your response MUST be a single, valid JSON object and nothing else. Do not inclu
 
 def main():
     parser = argparse.ArgumentParser(description="LLM-as-Judge Model Comparison")
-    parser.add_argument("--judge_model", default="gemini-2.5-pro", help="Judge model name")
+    parser.add_argument("--judge_model", default="deepseek-reasoner", help="Judge model name")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay between API calls (seconds)")
     parser.add_argument("--input_file", default="./Result/evaluation_data/selected_evaluation_samples.json", help="Path to input JSON file with samples")
-    parser.add_argument("--output_dir", default="./Result/LLM_Judge/gemini-2.5-pro", help="Path to input JSON file with samples")
+    parser.add_argument("--output_dir", default="./Result/LLM_Judge/deepseek-reasoner", help="Path to input JSON file with samples")
     parser.add_argument("--judge_config_path", default="./llm_judge_config.json", help="Path to judge config file")
 
     args = parser.parse_args()
