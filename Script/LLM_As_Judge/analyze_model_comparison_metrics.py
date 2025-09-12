@@ -116,7 +116,7 @@ def write_win_rate_table(f, title, ds_rates, gm_rates, models):
     """Write structured win rate table"""
     f.write(f"{title}\n")
     f.write("-" * 90 + "\n")
-    f.write(f"{'Judge':<10} {'Question':<12} {'Model':<20} {'Count':<8} {'%':<8} {'Net Advantage':<12}\n")
+    f.write(f"{'Judge':<10} {'Question':<12} {'Model':<20} {'Count':<8} {'%':<8} ")
     f.write("-" * 90 + "\n")
     
     for judge_name, rates in [('DeepSeek', ds_rates), ('Gemini', gm_rates)]:
@@ -124,18 +124,13 @@ def write_win_rate_table(f, title, ds_rates, gm_rates, models):
             counts = rates[f'{q_key}_counts']
             percentages = rates[f'{q_key}_rates']
             
-            # Calculate net advantage (assuming first model is fine-tuned)
             model_names = list(models)
-            if len(model_names) >= 2:
-                net_adv = percentages.get(model_names[0], 0) - percentages.get(model_names[1], 0)
-            else:
-                net_adv = 0
+
                 
             for i, model in enumerate(model_names):
                 count = counts.get(model, 0)
                 pct = percentages.get(model, 0)
-                net_str = f"{net_adv:+.2f}%" if i == 0 else ""
-                f.write(f"{judge_name:<10} {q_name:<12} {model:<20} {count:<8} {pct:<7.2f}% {net_str:<12}\n")
+                f.write(f"{judge_name:<10} {q_name:<12} {model:<20} {count:<8} {pct:<7.2f}%\n")
                 judge_name = ""  # Only show judge name once
                 q_name = ""      # Only show question name once
     f.write("\n")
