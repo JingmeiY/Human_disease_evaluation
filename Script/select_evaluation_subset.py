@@ -58,7 +58,7 @@ def main():
     blinded_data = load_json_file(input_path)
     
     # Select evaluation subset
-    selected_data = select_evaluation_subset(blinded_data, target_articles=500)    
+    selected_data = select_evaluation_subset(blinded_data, target_articles=5)    
     
     # Save results
     save_json_file(selected_output_path, selected_data)
